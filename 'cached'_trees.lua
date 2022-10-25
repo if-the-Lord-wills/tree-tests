@@ -1,14 +1,8 @@
 --[[
-	PartsFromStorageTest.lua
-	Created: 1/31/2020 11:15 AM EST
+	'cached'_trees.lua
+	Updated: 10/24/2022 10:47 PM EST
 	Author: John Barry
-	
-	purpose: to make a tree generator which uses parts that are stored/cached
-	in storage [StorageService]. Each part Instance is created and placed in the storage to be
-	used later; but in an efficient way, so that as the tree is generating it may more
-	efficiently generate using parts that have already been "cached", and some of which
-	use the :Clone() method to reduce the server's burden.
-
+		
 tree cache: [name = i, starting at 1]
 -4 = seed value
 -3 = position
@@ -20,32 +14,47 @@ tree cache: [name = i, starting at 1]
 3 = branches
 4 = fruit
 5 = leaves
-		
+
 ]]
 
-if not _VERSION == "Lua 5.1" then print("NOTICE: The version of Lua has been updated from Lua 5.1") end
-
-local I = Instance.new
-local C = CFrame.new
-local A = CFrame.Angles
-local V = Vector3.new
+local CN = CFrame.new
+local CA = CFrame.Angles
+local V3 = Vector3.new
 local C3 = Color3.new
 
-local mt = I("Model")
-local pt = I("Part") pt.Anchored = true pt.Locked = true pt.TopSurface=0 pt.BottomSurface=0 pt.CastShadow=false
-local ft = I("Folder")
-local bt = I("BoolValue")
-local nt = I("NumberValue")
-local vt = I("Vector3Value")
-local ct = I("CFrameValue")
-local ot = I("ObjectValue")
+--Templates:
+local temp = {
+	part = Instance.new("Part"),
+	model = Instance.new("Model"),
+	folder = Instance.new("Folder"),
+	bool = Instance.new("BoolValue"),
+	num = Instance.new("NumberValue"),
+	v3 = Instance.new("Vector3Value"),
+	cf = Instance.new("CFrameValue"),
+	obj = Instance.new("ObjectValue")
+}
+local part_temp = temp.part
+	part_temp.Anchored = true
+	part_temp.Locked = true
+	part_temp.TopSurface = Enum.SurfaceType.Smooth
+	part_temp.BottomSurface = Enum.SurfaceType.Smooth
+	part_temp.CastShadow = false
+	part_temp.Massless = true
+	part_temp.CanTouch = false --No need for extra physics calculations,
+	part_temp.CanCollide = false --at least until necessary.
+	part_temp.CanQuery = false --This part will be ignored by spatial queries
 
-local storage = game:GetService("ServerStorage")
-for i, v in next, storage:GetChildren() do if v.Name == "Tree Storage" then v:Destroy() end end
-local tree_storage = ft:Clone() tree_storage.Name = "Tree Storage" tree_storage.Parent = storage
-for i, v in next, workspace:GetChildren() do if v.Name == "Tree Models" then v:Destroy() end end
-local tree_models = ft:Clone() tree_models.Name = "Tree Models" tree_models.Parent = workspace
-local UID = 0
+local server_storage = game:GetService("ServerStorage")
+local replicated_storage = game:GetService("ReplicatedStorage")
+
+table.foreach(server_storage:GetChildren(), function(i, obj) if obj.Name == "Tree Storage" or obj.Name == "Tree Models" then obj:Destroy() end end)
+
+
+local tree_storage, tree_models = folder_temp:Clone(), folder_temp:Clone()
+	tree_storage.Name = "Tree Storage"
+	tree_models.Name = "Tree Models"
+
+local tree_id = 0
 
 local CT = function(o) --CACHE_TREE(options)
 	local q = o[1] --random seed
@@ -69,14 +78,24 @@ local CT = function(o) --CACHE_TREE(options)
 	local xb = o[19] --branch split part start
 	local xe = o[20] --branch split part stop
 	
-	UID = UID+1
-	local tc = ft:Clone() tc.Name = UID tc.Parent = tree_storage
-	local uv = bt:Clone() uv.Name = -1 uv.Parent = tc
+	tree_id = tree_id+1
+	
+	local tree_container = folder_temp:Clone()
+		tree_container.Name = tree_id
+		tree_container.Parent = tree_storage
+	
+	local is_used = bool_temp:Clone()
+		is_used.Name = -1
+		is_used.Parent = tree_container
+	
 	local av = ot:Clone() av.Name = -2 av.Parent = tc
 	local pv = ct:Clone() pv.Name = -3 pv.Value = x pv.Parent = tc
 	local sv = nt:Clone() sv.Name = -4 sv.Value = q sv.Parent = tc
 	
-	--local rf = ft:Clone() rf.Parent = tc rf.Name = 0 --roots folder
+	local roots_folder = folder_temp:Clone()
+		roots_folder.Parent = tc
+		roots_folder.Name = 0
+	
 	local tf = ft:Clone() tf.Parent = tc tf.Name = 2 --trunk folder
 	local bf = ft:Clone() bf.Parent = tc bf.Name = 3 --branches folder
 	--local ff = ft:Clone() ff.Parent = tc ff.Name = 4 --fruit folder
@@ -405,5 +424,8 @@ local test = function()
 	end
 	print("finished")
 end
+
+tree_storage.Parent = storage
+tree_models.Parent = workspace
 
 test()
