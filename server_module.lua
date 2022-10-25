@@ -1,152 +1,108 @@
---[[
+--[[------------------------------------
 	'cached'_trees.lua
 	Updated: 10/24/2022 10:47 PM EST
 	Author: John Barry
-		
-tree cache: [name = i, starting at 1]
--4 = seed value
--3 = position
--2 = user
--1 = used?
-0 = roots
-1 = base part
-2 = trunk
-3 = branches
-4 = fruit
-5 = leaves
+]]--------------------------------------
+
+--[[
+
+tree growth weights:
+
+if surrounded by obstacles, weight is added upward.
+	additional weight is added toward available sunlight,
+	i.e. where existing proximal obstacles do not block sunlight
+if on a hillside, weight is added toward the downhill direction.
+	i.e. cast some rays around the tree and ignore all objects except the ground;
+	and then add a weight relative to the elevation variation averaged and in the direction of the lowest elevation
 
 ]]
 
-
-
 local Tree = newproxy(true) do
 	
+	local server_storage = game:GetService("ServerStorage")
+	local replicated_storage = game:GetService("ReplicatedStorage")
 	
-
-	
-end
-
-return Tree
-
-
-
-
-local server_storage = game:GetService("ServerStorage")
-local replicated_storage = game:GetService("ReplicatedStorage")
-
-
-
-
-
-
-
-
-
-
-
-
-
-local new = Instance.new
-local CN = CFrame.new
-local CA = CFrame.Angles
-local V3 = Vector3.new
-local C3 = Color3.new
-
---Defaults:
-local defaults = {
-	Part = {
-		Anchored = true, Locked = true, CastShadow = false, Massless = true, CanTouch = false, CanCollide = false, CanQuery = false, TopSurface = 0, BottomSurface = 0
+	local templates = {
+		Part = Instance.new("Part"),
+		Model = Instance.new("Model"),
+		Folder = Instance.new("Folder"),
+		BoolValue = Instance.new("BoolValue"),
+		NumberValue = Instance.new("NumberValue"),
+		Vector3Value = Instance.new("Vector3Value"),
+		CFrameValue = Instance.new("CFrameValue"),
+		ObjectValue = Instance.new("ObjectValue")
 	}
-}
-
---Templates:
-local templates = {
-	Part = new("Part"),
-	Model = new("Model"),
-	Folder = new("Folder"),
-	BoolValue = new("BoolValue"),
-	NumberValue = new("NumberValue"),
-	Vector3Value = new("Vector3Value"),
-	CFrameValue = new("CFrameValue"),
-	ObjectValue = new("ObjectValue")
-}
-
-local function apply_properties(obj, properties) for property, value in pairs(properties) do obj[property] = value end end
-apply_properties(templates.Part, defaults.Part)
-
-table.foreach(server_storage:GetChildren(), function(i, obj) if obj.Name == "Tree Storage" or obj.Name == "Tree Models" then obj:Destroy() end end)
-
-local tree_storage, tree_models = folder_temp:Clone(), folder_temp:Clone()
-	tree_storage.Name = "Tree Storage"
-	tree_models.Name = "Tree Models"
-
-local tree_id = 0
-
-local function 
-
-local CT = function(o) --CACHE_TREE(options)
-	local q = o[1] --random seed
-	local x = o[2] --start point
-	local ss = o[3] --trunk start size
-	local ts = o[4] --trunk scaling
-	local tr = o[5] --trunk resolution
-	local tk = o[6] --trunk rigidity
-	local bn = o[7] --# branches
-	local ba = o[8] --branch angle (in radians)
-	local sb = o[9] --branch start [after how many trunk parts]
-	local bl = o[10] --branch limit [after how many trunk parts branches stop]
-	local bs = o[11] --branch scaling
-	local br = o[12] --branch resolution
-	local pa = o[13] --phyllotaxic angle
-	local pd = o[14] --phyllotaxic deviation
-	local n = o[15] --# branch splits
-	local xs = o[16] --# branch split parts
-	local xz = o[17] --branch split part scaling
-	local xa = o[18] --branch split part angle
-	local xb = o[19] --branch split part start
-	local xe = o[20] --branch split part stop
 	
-	tree_id = tree_id+1
+	local defaults = {
+		Part = {
+			Anchored = true,
+			Locked = true,
+			CastShadow = false,
+			Massless = true,
+			CanTouch = false,
+			CanCollide = false,
+			CanQuery = false,
+			TopSurface = Enum.SurfaceType.Smooth,
+			BottomSurface = Enum.SurfaceType.Smooth
+		}
+	}
 	
-	local tree_container = folder_temp:Clone()
-		tree_container.Name = tree_id
-		tree_container.Parent = tree_storage
+	local function apply_properties(obj, properties) for property, value in pairs(properties) do obj[property] = value end end
+	apply_properties(templates.Part, defaults.Part)
+	templates.BoolValue.Value = false
 	
-	local is_used = bool_temp:Clone()
-		is_used.Name = -1
-		is_used.Parent = tree_container
+	table.foreach(server_storage:GetChildren(), function(i, obj) if obj.Name == "TreeStorage" or obj.Name == "TreeModels" then obj:Destroy() end end)
+	local tree_storage = templates.Folder:Clone() tree_storage.Name = "TreeStorage"
+	local tree_models = templates.Folder:Clone() tree_models.Name = "TreeModels"
 	
-	local av = ot:Clone() av.Name = -2 av.Parent = tc
-	local pv = ct:Clone() pv.Name = -3 pv.Value = x pv.Parent = tc
-	local sv = nt:Clone() sv.Name = -4 sv.Value = q sv.Parent = tc
+	local tree_count = 0
 	
-	local roots_folder = folder_temp:Clone()
-		roots_folder.Parent = tc
-		roots_folder.Name = 0
-	
-	local tf = ft:Clone() tf.Parent = tc tf.Name = 2 --trunk folder
-	local bf = ft:Clone() bf.Parent = tc bf.Name = 3 --branches folder
-	--local ff = ft:Clone() ff.Parent = tc ff.Name = 4 --fruit folder
-	--local lf = ft:Clone() lf.Parent = tc lf.Name = 5 --leaves folder
-	
-	local tb = pt:Clone()
-	tb.Name = 1
-	tb.Size = ss
-	tb.CFrame = x
-	tb.Color = C3(0.8, 0.5, 0.3)
-	tb.Material = "Wood"
-	tb.Parent = tc
-	
-	local ti = table.insert
-	local pi = math.pi
-	local floor = math.floor
-	local Q = Random.new(q) --random number generator
-	
-	local t = {tb} --trunk parts
-	local s = ss --last part size
-	local p = x --last part pos (CFrame)
-	
-	for i = 1, tr do
+	local function cache_tree(parameters)
+		
+		task.wait()
+		
+		tree_count = tree_count + 1
+		
+		local seed = parameters.seed
+		local position = parameters.position
+		local trunk_start_size = parameters.trunk_start_size
+		local trunk_scaling = parameters.trunk_scaling
+		local trunk_resolution = parameters.trunk_resolution
+		local trunk_rigidity = parameters.trunk_rigidity
+		local branch_count = parameters.branch_count
+		local branch_angle = parameters.branch_angle
+		local branch_start = parameters.branch_start
+		local branch_limit = parameters.branch_limit
+		local branch_scaling = parameters.branch_scaling
+		local branch_resolution = parameters.branch_resolution
+		local phyllotaxic_angle = parameters.phyllotaxic_angle
+		local phyllotaxic_deviation = parameters.phyllotaxic_deviation
+		local branch_split_count = paramters.branch_split_count
+		local branch_split_part_count = parameters.branch_split_part_count
+		local branch_split_part_scaling = parameters.branch_split_part_scaling
+		local branch_split_part_angle = parameters.branch_split_part_angle
+		local branch_split_part_start = parameters.branch_split_part_start
+		local branch_split_part_stop = parameters.branch_split_part_stop
+		
+		local tree_container = templates.Folder:Clone() tree_container.Name = tree_count
+		
+		local roots_folder = templates.Folder:Clone() roots_folder.Name = 0
+		local trunk_folder = templates.Folder:Clone() trunk_folder.Name = 2
+		local branches_folder = templates.Folder:Clone() branches_folder.Name = 3
+		local fruit_folder = templates.Folder:Clone() fruit_folder.Name = 4
+		local leaves_folder = templates.Folder:Clone() leaves_folder.Name = 5
+		
+		local tree_base = templates.Part:Clone()
+			tree_base.Name = 1
+			tree_base.Size = trunk_start_size
+			tree_base.CFrame = position
+			tree_base.Color = C3(0.8, 0.5, 0.3)
+			tree_base.Material = "Wood"
+			tree_base.Parent = tree_container
+		
+		--tree generation:
+			
+		for i = 1, tr do
 		local ns = s + ts
 		
 		local r1, r2, r3 = Q:NextNumber(), Q:NextNumber(), Q:NextNumber()
@@ -306,7 +262,55 @@ local CT = function(o) --CACHE_TREE(options)
 	end
 	print("Cached. [UID="..UID.."]")
 	return tc
+		
+		
+		
+		
+		roots_folder.Parent = tree_container
+		trunk_folder.Parent = tree_container
+		branches_folder.Parent = tree_container
+		fruit_folder.Parent = tree_container
+		leaves_folder.Parent = tree_container
+		
+		local is_used = templates.BoolValue:Clone() is_used.Name = -1
+		local user_value = templates.ObjectValue:Clone() user_value.Name = -2
+		local position_value = templates.Vector3Value:Clone() position_value.Name = -3 position_value.Value = position
+		local seed_value = templates.NumberValue:Clone() seed_value.Name = -4 seed_value.Value = seed
+		
+		is_used.Parent = tree_container
+		user_value.Parent = tree_container
+		position_value.Parent = tree_container
+		seed_value.Parent = tree_container
+		
+		tree_container.Parent = tree_storage
+	
+	local ti = table.insert
+	local pi = math.pi
+	local floor = math.floor
+	local Q = Random.new(q) --random number generator
+	
+	local t = {tb} --trunk parts
+	local s = ss --last part size
+	local p = x --last part pos (CFrame)
+	end
 end
+
+return Tree
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 local MT = function(tc)
 	print("function MT init")
@@ -457,3 +461,19 @@ tree_storage.Parent = storage
 tree_models.Parent = workspace
 
 test()
+
+
+
+
+
+
+
+
+
+
+	local _tree = getmetatable(Tree)
+	_tree.__metatable = false
+	
+	_tree.__index = {}
+	
+	local trees = {}
