@@ -227,7 +227,7 @@ local CT = function(o) --CACHE_TREE(options)
 				
 				for l = 1, xs do
 					--local d = (V(p)-V(x)).magnitude --distance to the tree start point
-				
+					
 					local ns = s + xz
 					
 					local r1, r2, r3 = Q:NextNumber(), Q:NextNumber(), Q:NextNumber()
@@ -298,10 +298,10 @@ local RC = function(tm)
 end
 
 local test = function()
-	local num = 100
+	local num = 10
 	local sqn = math.floor(math.sqrt(num))
-	local dist = 100
-	local character = workspace:WaitForChild("ask4kingbily", 2)
+	local dist = 250
+	local character = workspace:WaitForChild("NinjaScripter", 2)
 	local torso = character.PrimaryPart
 	if not character or not torso then print("no character") return end
 	print("character found")
@@ -311,10 +311,10 @@ local test = function()
 	for i = 1, num do
 		wait()
 		for j = 1, num do
-		local time_seed = tick()
-		local sz = math.ceil(math.random(4, 8))
-		local of1, of2 = math.random(-10, 10), math.random(-10, 10)
-		local ps = C(i*40-num*20+of1, 0, j*40-num*20+of2)--C(i*40-num*20, 0, j*40-num*20)
+			local time_seed = tick()
+			local sz = math.ceil(math.random(4, 8))
+			local of1, of2 = math.random(-20, 20), math.random(-20, 20)
+			local ps = C(i*40-num*20+of1, 0, j*40-num*20+of2)--C(i*40-num*20, 0, j*40-num*20)
 		--[[local tc = CT({
 			time_seed+i+j, --tree seed
 			ps, --tree cframe
@@ -337,7 +337,7 @@ local test = function()
 			1, --branch split part start
 			4 --branch split part stop
 		})]]
-		
+			
 		--[[local tc = CT({
 			time_seed+i+j-0.5, --tree seed
 			ps*C(-of1*2+sz, 0, -of2*2+sz), --tree cframe
@@ -360,31 +360,31 @@ local test = function()
 			1, --branch split part start
 			4 --branch split part stop
 		})]]
-		local tc = CT({
-			time_seed+i+j-0.5, --tree seed
-			ps*C(-of1*2+sz, 0, -of2*2+sz), --tree cframe
-			V(5, 8, 5), --base size
-			V(-1/7, -1/49, -1/7), --trunk scaling
-			9, --trunk resolution
-			1, --trunk rigidity
-			3, --# branches
-			0.3, --branching angle (in radians)
-			4, --branch start [after how many trunk-parts]
-			9, --branch limit [after how many trunk-parts do branches stop]
-			V(-1/5, -1/25, -1/5), --branch scaling
-			9, --branch resolution
-			0.7, --phyllotaxic angle (in radians)
-			0, --phyllotaxic deviation
-			2, --# branch splits
-			9, --# branch split parts
-			V(-1/3, -1/9, -1/3), --branch split part scaling
-			0.1, --branch split part angle
-			1, --branch split part start
-			9 --branch split part stop
-		})
-		--local tm = MT(tc)
-		--local nil_tm = MT(tc)
-		msg.Text = "Generating tree data... ["..i.."/"..num.."]"
+			local tc = CT({
+				time_seed+i+j-0.5, --tree seed
+				ps*C(-of1*2+sz, 0, -of2*2+sz), --tree cframe
+				V(3, 8, 3), --base size
+				V(-1/6, -1/60, -1/6), --trunk scaling
+				9, --trunk resolution
+				0.3, --trunk rigidity
+				2, --# branches
+				0.3, --branching angle (in radians)
+				3, --branch start [after how many trunk-parts]
+				9, --branch limit [after how many trunk-parts do branches stop]
+				V(-1/3, -1/30, -1/3), --branch scaling
+				9, --branch resolution
+				0.7, --phyllotaxic angle (in radians)
+				0, --phyllotaxic deviation
+				5, --# branch splits
+				7, --# branch split parts
+				V(-1/3, -1/30, -1/3), --branch split part scaling
+				0.3, --branch split part angle
+				1, --branch split part start
+				7 --branch split part stop
+			})
+			--local tm = MT(tc)
+			--local nil_tm = MT(tc)
+			msg.Text = "Generating tree data... ["..i.."/"..num.."]"
 		end
 	end
 	msg.Text = "loaded [render distance: "..dist.." studs]"
