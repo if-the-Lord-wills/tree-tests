@@ -298,9 +298,9 @@ local RC = function(tm)
 end
 
 local test = function()
-	local num = 1
+	local num = 100
 	local sqn = math.floor(math.sqrt(num))
-	local dist = 100
+	local dist = 20
 	local character = workspace:WaitForChild("ask4kingbily", 2)
 	local torso = character.PrimaryPart
 	if not character or not torso then print("no character") return end
