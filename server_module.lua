@@ -17,44 +17,72 @@ tree cache: [name = i, starting at 1]
 
 ]]
 
+
+
+local Tree = newproxy(true) do
+	
+	
+
+	
+end
+
+return Tree
+
+
+
+
+local server_storage = game:GetService("ServerStorage")
+local replicated_storage = game:GetService("ReplicatedStorage")
+
+
+
+
+
+
+
+
+
+
+
+
+
+local new = Instance.new
 local CN = CFrame.new
 local CA = CFrame.Angles
 local V3 = Vector3.new
 local C3 = Color3.new
 
---Templates:
-local temp = {
-	part = Instance.new("Part"),
-	model = Instance.new("Model"),
-	folder = Instance.new("Folder"),
-	bool = Instance.new("BoolValue"),
-	num = Instance.new("NumberValue"),
-	v3 = Instance.new("Vector3Value"),
-	cf = Instance.new("CFrameValue"),
-	obj = Instance.new("ObjectValue")
+--Defaults:
+local defaults = {
+	Part = {
+		Anchored = true, Locked = true, CastShadow = false, Massless = true, CanTouch = false, CanCollide = false, CanQuery = false, TopSurface = 0, BottomSurface = 0
+	}
 }
-local part_temp = temp.part
-	part_temp.Anchored = true
-	part_temp.Locked = true
-	part_temp.TopSurface = Enum.SurfaceType.Smooth
-	part_temp.BottomSurface = Enum.SurfaceType.Smooth
-	part_temp.CastShadow = false
-	part_temp.Massless = true
-	part_temp.CanTouch = false --No need for extra physics calculations,
-	part_temp.CanCollide = false --at least until necessary.
-	part_temp.CanQuery = false --This part will be ignored by spatial queries
 
-local server_storage = game:GetService("ServerStorage")
-local replicated_storage = game:GetService("ReplicatedStorage")
+--Templates:
+local templates = {
+	Part = new("Part"),
+	Model = new("Model"),
+	Folder = new("Folder"),
+	BoolValue = new("BoolValue"),
+	NumberValue = new("NumberValue"),
+	Vector3Value = new("Vector3Value"),
+	CFrameValue = new("CFrameValue"),
+	ObjectValue = new("ObjectValue")
+}
+
+local function apply_properties(obj, properties) for property, value in pairs(properties) do obj[property] = value end end
+apply_properties(templates.Part, defaults.Part)
 
 table.foreach(server_storage:GetChildren(), function(i, obj) if obj.Name == "Tree Storage" or obj.Name == "Tree Models" then obj:Destroy() end end)
-
 
 local tree_storage, tree_models = folder_temp:Clone(), folder_temp:Clone()
 	tree_storage.Name = "Tree Storage"
 	tree_models.Name = "Tree Models"
 
 local tree_id = 0
+
+local function 
 
 local CT = function(o) --CACHE_TREE(options)
 	local q = o[1] --random seed
