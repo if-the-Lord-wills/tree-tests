@@ -11,9 +11,38 @@ tree growth weights:
 if surrounded by obstacles, weight is added upward.
 	additional weight is added toward available sunlight,
 	i.e. where existing proximal obstacles do not block sunlight
+
 if on a hillside, weight is added toward the downhill direction.
 	i.e. cast some rays around the tree and ignore all objects except the ground;
 	and then add a weight relative to the elevation variation averaged and in the direction of the lowest elevation
+
+prevailing wind direction contributes weight in its vector proportional to its force.
+	note: tree health cancels out environmental_stress factors [weights] (linearly).
+
+sunlight [supply]
+	more sunlight increases growth factor
+	weight is added toward light source [the sun].
+	scarce sunlight supply decreases tree health, inversely proportional to its shade_affinity
+
+lower temperature weighs down growth linearly
+higher temperature increases growth logarithmically
+excessively high temperatures decrease growth linearly
+
+water supply increases tree growth linearly
+root structure supply will increase water supply linearly, proportionate to available and proximal water
+excessive water prevents tree rooting
+scarce water supply decreases tree health linearly
+
+competition increases upward growth (adds weight)
+root conflict prevents lateral rooting,
+and adds weight to taproot growth
+
+lack of root structure will decrease tree health linearly.
+more roots will add weight toward upward growth and increase growth energy/factor.
+
+obstacles will add weight in the opposite direction.
+obstacles also directly prevent growth of a branch.
+root obstacles prevent secondary or primary root growth and add weight perpendicular to the vector of obstacle encounter.
 
 ]]
 
@@ -43,7 +72,8 @@ local Tree = newproxy(true) do
 			CanCollide = false,
 			CanQuery = false,
 			TopSurface = Enum.SurfaceType.Smooth,
-			BottomSurface = Enum.SurfaceType.Smooth
+			BottomSurface = Enum.SurfaceType.Smooth,
+			Color = Color3.new(0.8, 0.5, 0.3)
 		}
 	}
 	
@@ -58,14 +88,9 @@ local Tree = newproxy(true) do
 	local tree_count = 0
 	
 	local function cache_tree(parameters)
-		
-		task.wait()
-		
-		tree_count = tree_count + 1
-		
 		local seed = parameters.seed
 		local position = parameters.position
-		local trunk_start_size = parameters.trunk_start_size
+		local trunk_size = parameters.trunk_start_size
 		local trunk_scaling = parameters.trunk_scaling
 		local trunk_resolution = parameters.trunk_resolution
 		local trunk_rigidity = parameters.trunk_rigidity
@@ -83,8 +108,13 @@ local Tree = newproxy(true) do
 		local branch_split_part_angle = parameters.branch_split_part_angle
 		local branch_split_part_start = parameters.branch_split_part_start
 		local branch_split_part_stop = parameters.branch_split_part_stop
+		local shade_affinity = parameters.shade_affinity
+		local taproot_affinity = parameters.taproot_affinity
+		local fruiting = parameters.fruiting
+		local fruit_type = parameters.fruit_type
+		local leaf_type = parameters.leaf_type --needle, broadleaf, or leaf_object
 		
-		local tree_container = templates.Folder:Clone() tree_container.Name = tree_count
+		task.wait()
 		
 		local roots_folder = templates.Folder:Clone() roots_folder.Name = 0
 		local trunk_folder = templates.Folder:Clone() trunk_folder.Name = 2
@@ -92,53 +122,69 @@ local Tree = newproxy(true) do
 		local fruit_folder = templates.Folder:Clone() fruit_folder.Name = 4
 		local leaves_folder = templates.Folder:Clone() leaves_folder.Name = 5
 		
-		local tree_base = templates.Part:Clone()
-			tree_base.Name = 1
-			tree_base.Size = trunk_start_size
-			tree_base.CFrame = position
-			tree_base.Color = C3(0.8, 0.5, 0.3)
-			tree_base.Material = "Wood"
-			tree_base.Parent = tree_container
+		local trunk_base = templates.Part:Clone() trunk_base.Name = 1
+			trunk_base.Size = trunk_start_size
+			trunk_base.CFrame = position
+			trunk_base.Color = C3(0.8, 0.5, 0.3)
+			trunk_base.Material = "Wood"
+			trunk_base.Parent = tree_container
+		
+		local insert = table.insert
+		local floor = math.floor
+		local pi = math.pi
 		
 		--tree generation:
+		local trunk = {trunk_base}
+		local trunk_size = trunk_start_size
+		local position = position
+		
+		--generate trunk:
+		for n = 1, trunk_resolution do
+			local new_trunk_size = trunk_size+trunk_scaling
+			local mn = (1-n/7)*(1-trunk_rigidity)
 			
-		for i = 1, tr do
-		local ns = s + ts
-		
-		local r1, r2, r3 = Q:NextNumber(), Q:NextNumber(), Q:NextNumber()
-		local mn = (1-i/7)*(1-tk)
-		local ta = A(r1*mn, r2*mn, r3*mn)
-		local np = p*C(0, s.Y/2, 0)*ta*C(0, ns.Y/2, 0)
-		
-		local tp = tb:Clone()
-		tp.Name = i
-		tp.Size = ns
-		tp.CFrame = np
-		tp.Parent = tf
-		
-		ti(t, tp)
-		s = ns
-		p = np
-	end
-	
-	local b = {} --branches
-	local ro = Q:NextNumber()*pi*2
-	
-	for i = 1, bn do
-		local rt = (bl-sb)/bn
-		local ft = t[floor(rt*i)+1+sb]
-		local fs = ft.Size
-		--ft.Color = C3(0.8, 0.3, 0.5)
-		
-		local dt = Q:NextNumber()
-		local u = 2 --number of branches per node
-		if dt<0.2 then
-			u = 5
-		elseif dt<0.5 then
-			u = 3
-		elseif dt<0.8 then
-			u = 2
+			--pseudo-random offset angle:
+			local offset_angle = CFrame.Angles(
+				(Q:NextNumber()-0.5)*pi,
+				(Q:NextNumber()-0.5)*pi,
+				(Q:NextNumber()-0.5)*pi
+			)
+			
+			local new_position = position * CFrame.new(0, size.Y/2, 0) * offset_angle * CFrame.new(0, new_trunk_size/2, 0)
+			
+			local trunk_part = trunk_base:Clone()
+				trunk_part.Name = n
+				trunk_part.Size = new_trunk_size
+				trunk_part.CFrame = new_position
+				trunk_part.Parent = trunk_folder
+			insert(trunk, trunk_part)
+			trunk_size = new_trunk_size
+			position = new_position
 		end
+		
+		local branches = {}
+		local branch_rotation = Q:NextNumber()*pi*2
+		for b = 1, branch_count do
+			local interval = (branch_limit-branch_start)/branch_count
+			local chosen_part = trunk[floor(interval*b)+1+branch_start]
+			local chosen_size = chosen_part.Size
+			
+			local determinant = Q:NextNumber()
+			local split_iterations = 2
+			
+			if determinant<0.2 then
+				split_iterations = 5
+			elseif determinant<0.5 then
+				split_iterations = 3
+			elseif determinant<0.8 then
+				split_iterations = 2
+			end
+			
+			local start_angle = pi*2/split_iterations
+			
+			for 
+		end
+		
 		local sa = pi*2/u
 		
 		for j = 0, u-1 do
@@ -264,7 +310,8 @@ local Tree = newproxy(true) do
 	return tc
 		
 		
-		
+		tree_count = tree_count+1
+		local tree_container = templates.Folder:Clone() tree_container.Name = tree_count
 		
 		roots_folder.Parent = tree_container
 		trunk_folder.Parent = tree_container
