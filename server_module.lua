@@ -88,6 +88,8 @@ local Tree = newproxy(true) do
 	local tree_count = 0
 	
 	local function cache_tree(parameters)
+		tree_count = tree_count+1
+		
 		local seed = parameters.seed
 		local position = parameters.position
 		local trunk_size = parameters.trunk_start_size
@@ -132,6 +134,7 @@ local Tree = newproxy(true) do
 		local insert = table.insert
 		local floor = math.floor
 		local pi = math.pi
+		local Q = Random.new()
 		
 		--tree generation:
 		local trunk = {trunk_base}
@@ -139,21 +142,21 @@ local Tree = newproxy(true) do
 		local position = position
 		
 		--generate trunk:
-		for n = 1, trunk_resolution do
+		for t = 1, trunk_resolution do
 			local new_trunk_size = trunk_size+trunk_scaling
-			local mn = (1-n/7)*(1-trunk_rigidity)
+			local pliability = (1-t/trunk_resolution)*(1-trunk_rigidity)
 			
 			--pseudo-random offset angle:
 			local offset_angle = CFrame.Angles(
-				(Q:NextNumber()-0.5)*pi,
-				(Q:NextNumber()-0.5)*pi,
-				(Q:NextNumber()-0.5)*pi
+				(Q:NextNumber()-0.5)*pi/20*pliability,
+				(Q:NextNumber()-0.5)*pi/20*pliability,
+				(Q:NextNumber()-0.5)*pi/20*pliability
 			)
 			
 			local new_position = position * CFrame.new(0, size.Y/2, 0) * offset_angle * CFrame.new(0, new_trunk_size/2, 0)
 			
 			local trunk_part = trunk_base:Clone()
-				trunk_part.Name = n
+				trunk_part.Name = t
 				trunk_part.Size = new_trunk_size
 				trunk_part.CFrame = new_position
 				trunk_part.Parent = trunk_folder
@@ -172,152 +175,133 @@ local Tree = newproxy(true) do
 			local determinant = Q:NextNumber()
 			local split_iterations = 2
 			
-			if determinant<0.2 then
-				split_iterations = 5
-			elseif determinant<0.5 then
-				split_iterations = 3
-			elseif determinant<0.8 then
-				split_iterations = 2
-			end
+			if determinant<0.5 then split_iterations = 3 elseif determinant<0.8 then split_iterations = 2 end
 			
 			local start_angle = pi*2/split_iterations
 			
-			for 
-		end
-		
-		local sa = pi*2/u
-		
-		for j = 0, u-1 do
-			s = V(fs.X, ss.X, fs.Z)
-			--p = ft.CFrame*C(0, -fs.Y/2+fs.Y/u*j, 0)*A(0, pi*pa*i+(sa*j), pi*0.235+(bn-i)/bn*pi*0.235)*C(0, s.Y/2, 0)
-			--p = ft.CFrame*C(0, -fs.Y/2+fs.Y/u*j, 0)*A(0, pi*pa*i+(sa*j), pi*ba)*C(0, s.Y*0.5, 0)
-			p = ft.CFrame*C(0, 0, 0)*A(0, ro+pi*pa*i+(sa*j), pi*ba)*C(0, s.Y*0.5, 0)
-			
-			local bb = tb:Clone()
-			bb.Name = i
-			bb.Size = s
-			bb.CFrame = p
-			--bb.Color = C3(0.5, 0.8, 0.3)
-			bb.Parent = bf
-			
-			local bt = {bb}
-			for k = 1, br do
-				--local d = (V(p)-V(x)).magnitude --distance to the tree start point
+			for s = 0, split_iterations-1 do
+				size = Vector3.new(chosen_size.X, trunk_start_size.Y, chosen_size.Z)
+				position = chosen_part.CFrame*CFrame.Angles(
+					0,
+					start_angle+pi*phyllotaxic_angle*b+(start_angle*s),
+					pi*branch_angle
+				)*CFrame.new(0, size.Y/2, 0)
 				
-				local ns = s + bs
+				local branch_base = trunk_base:Clone()
+				branch_base.Name = b
+				branch_base.Size = size
+				branch_base.CFrame = position
+				branch_base.Parent = branch_folder
 				
-				local r1, r2, r3 = Q:NextNumber(), Q:NextNumber(), Q:NextNumber()
-				local mn = (1-k/br)*0.2
-				--local ta = A(r1*mn, r2*mn, -math.abs(r3*mn))
-				local ta = A(r1*mn, r2*mn, r3*mn)
-				local np = p*C(0, s.Y/2, 0)*ta*C(0, ns.Y/2, 0)
-				
-				local bp = tb:Clone()
-				bp.Name = bn+k
-				bp.Size = ns
-				bp.CFrame = np
-				bp.Parent = bf
-				
-				if k == br then
-					--[[bp.Shape = "Ball"
-					bp.Color = C3(0.5, 0.8, 0.3)
-					bp.Size = V(3, 3, 3)
-					bp.CFrame = np*ta]]
+				local branch = {branch_base}
+				for k = 1, branch_resolution do
+					local new_size = size+branch_scaling
+					local pliability = (1-k/branch_resolution)*0.2
+					
+					local offset_angle = CFrame.Angles(
+						(Q:NextNumber()-0.5)*pi/20*pliability,
+						(Q:NextNumber()-0.5)*pi/20*pliability,
+						(Q:NextNumber()-0.5)*pi/20*pliability
+					)
+					
+					local new_position = position*CFrame.new(0, size.Y/2, 0)*offset_angle*CFrame.new(0, new_size.Y/2, 0)
+					
+					local branch_part = branch_base:Clone()
+						branch_part.Name = branch_count+k
+						branch_part.Size = new_size
+						branch_part.CFrame = new_position
+						branch_part.Parent = branch_folder
+					
+						if k == branch_resolution then
+							--fruit?
+							
+						end
+					
+						insert(branch, branch_part)
+						size = new_size
+						position = new_position
 				end
-				
-				ti(bt, bp)
-				s = ns
-				p = np
+				insert(branches, branch)
 			end
-			ti(b, bt)
 		end
-	end
 	
-	local cb = b
-	for i = 1, n do --branch splitting!
-		local rb = {}
-		for j, v in next, cb do --for every branch in the current table of branches:
-			
-			local dt = Q:NextNumber()
-			local u = 1 --number of branches per node
-			if dt<0.2 then
-				u = 5
-			elseif dt<0.5 then
-				u = 3
-			elseif dt<0.8 then
-				u = 2
-			end
-			local sa = pi*2/u
-			
-			local bt = {}
-			for k = 0, u-1 do
-				--local rt = br/u
-				--local fb = v[floor(rt*k)+1]
-				local rt = (xe-xb)/u
-				local fb = v[floor(rt*k)+1+xb]
-				if not fb then return end
-				--local fb = v[Q:NextInteger(1, #v)]
-				local fs = fb.Size
-				if fs.X < 0.05 then return end
-				--local rot = Q:NextInteger(1, 3)*pi/2
-				local rot = pi*pa*(j+k+1)
-				s = V(fs.X, fs.X, fs.Z)
-				--s = fs
-				--p = fb.CFrame*C(0, fs.Y/2/u*k, 0)*A(0, pi*pa*k+(sa*j), pi*xa)*C(0, s.Y*0.5+s.X/3, 0)
-				p = fb.CFrame*C(0, fs.Y/2/u*k, 0)*A(0, rot+(sa*(j+1)), pi*xa)*C(0, s.Y*0.5+s.X/3, 0)
+		local these_branches = branches
+		
+		for i = 1, branch_split_count do
+			local branch_split = {}
+			for j, this_branch in next, these_branches do --for every branch in the current table of branches:
+				local determinant = Q:NextNumber()
+				local split_iterations = 2
 				
-				local bb = tb:Clone()
-				bb.Name = i
-				bb.Size = s
-				bb.CFrame = p
-				--bb.Color = C3(0.5, 0.8, 0.3)
-				bb.Parent = bf
-				ti(bt, bb)
+				local start_angle = pi*2/split_iterations
 				
-				for l = 1, xs do
-					--local d = (V(p)-V(x)).magnitude --distance to the tree start point
+				local branch = {}
+				
+				for k = 0, split_iterations-1 do
+					local interval = (branch_split_part_stop-branch_split_part_start)/split_iterations
+					local current_part = this_branch[floor(interval*k)+1+branch_split_part_start]
+					if not current_part then return end
+					local current_size = current_part.Size
+					if current_size.X<0.05 then return end
+					local this_rotation = pi*phyllotaxic_angle*(j+k+1)
+					size = current_size--Vector3.new(current_size.X, current_size.X, current_size.Z)
+					position = current_part.CFrame*
+						CFrame.new(0, current_size.Y/2/interval*k, 0)*
+						CFrame.Angles(0, rotation+(start_angle*(j+1)), pi*branch_split_part_angle)*
+						CFrame.new(0, size.Y/2+size.X/3, 0)
 					
-					local ns = s + xz
+					local branch_base = trunk_base:Clone()
+						branch_base.Name = i
+						branch_base.Size = size
+						branch_base.CFrame = position
+						branch_base.Parent = branch_folder
+						insert(this_branch, branch_base)
 					
-					local r1, r2, r3 = Q:NextNumber(), Q:NextNumber(), Q:NextNumber()
-					local mn = (1-k/br)*0.1
-					local ta = A(r1*mn, r2*mn, r3*mn)
-					local np = p*C(0, s.Y/2, 0)*ta*C(0, ns.Y/2, 0)
+					for l = 1, branch_split_part_count do
+						local new_scale = size+branch_split_part_scaling
+						
+						local pliability = (1-k/branch_resolution)*0.2
 					
-					local bp = tb:Clone()
-					bp.Name = bn+k
-					bp.Size = ns
-					bp.CFrame = np
-					bp.Parent = bf
-					
-					--[[if i == n and l == xs then
-						bp.Shape = "Ball"
-						bp.Color = C3(0.5, 0.8, 0.3)
-						bp.Size = V(3, 3, 3)
-						bp.CFrame = np*ta
-					end]]
-					
-					ti(bt, bp)
-					s = ns
-					p = np
+						local offset_angle = CFrame.Angles(
+							(Q:NextNumber()-0.5)*pi/20*pliability,
+							(Q:NextNumber()-0.5)*pi/20*pliability,
+							(Q:NextNumber()-0.5)*pi/20*pliability
+						)
+						
+						local new_position = position*CFrame.new(0, size.Y/2, 0)*
+							offset_angle*
+							CFrame.new(0, new_size.Y/2, 0)
+						
+						local branch_part = trunk_base:Clone()
+							branch_part.Name = branch_count+k
+							branch_part.Size = new_size
+							branch_part.CFrame = new_position
+							branch_part.Parent = branch_folder
+						
+						if i == branch_split_count and l == branch_split_part_count then
+							branch_part.Shape = "Ball"
+							branch_part.Size = Vector3.new(3, 3, 3)
+							branch_part.Color = Color3.new(0.5, 0.8, 0.3)
+							branch_part.CFrame = new_position*offset_angle
+						end
+						
+						insert(branch, branch_part)
+						size = new_size
+						position = new_position
+					end
 				end
+				insert(branch_split, branch)
 			end
-			ti(rb, bt)
+			these_branches = branch_split
 		end
-		cb = rb
-	end
-	print("Cached. [UID="..UID.."]")
-	return tc
 		
-		
-		tree_count = tree_count+1
 		local tree_container = templates.Folder:Clone() tree_container.Name = tree_count
 		
-		roots_folder.Parent = tree_container
-		trunk_folder.Parent = tree_container
-		branches_folder.Parent = tree_container
-		fruit_folder.Parent = tree_container
-		leaves_folder.Parent = tree_container
+		roots_folder.Parent = tree_container --parent the new roots,
+		trunk_folder.Parent = tree_container --trunk,
+		branches_folder.Parent = tree_container --branches,
+		fruit_folder.Parent = tree_container --fruit,
+		leaves_folder.Parent = tree_container --and leaves to the tree_container [cache]
 		
 		local is_used = templates.BoolValue:Clone() is_used.Name = -1
 		local user_value = templates.ObjectValue:Clone() user_value.Name = -2
@@ -329,71 +313,49 @@ local Tree = newproxy(true) do
 		position_value.Parent = tree_container
 		seed_value.Parent = tree_container
 		
-		tree_container.Parent = tree_storage
-	
-	local ti = table.insert
-	local pi = math.pi
-	local floor = math.floor
-	local Q = Random.new(q) --random number generator
-	
-	local t = {tb} --trunk parts
-	local s = ss --last part size
-	local p = x --last part pos (CFrame)
+		tree_container.Parent = tree_storage --parent the tree_container [cache] to the tree_storage [lastly -- after parenting its children]
+		
+		print("Cached tree. Tree count: "..tree_count)
+		return tree_container
 	end
-end
-
-return Tree
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-local MT = function(tc)
-	print("function MT init")
-	local uv = tc[-1]
-	local av = tc[-2]
-	if uv.Value then print("Cache is being used by"..av.Value.Name.."!") return nil end
-	uv.Value = true
 	
-	local tm = mt:Clone()
-	tm.Name = tc.Name
-	tm.Parent = tree_models
+	local function make_tree(tree_cache)
+		local is_used_value = tree_cache[-1]
+		local user_value = tree_cache[-2]
+		
+		if is_used_value.Value then print("Cache is being used by "..user_value.Name.."!") return nil end
+		
+		is_used_value.Value = true --the tree cache is now in use
+		
+		local tree_model = templates.Model:Clone() --make a new Model for the tree parts
+			tree_model.Name = tree_cache.Name --name it according to its index [Name] in the cache
+		
+		user_value.Value = tree_models --set the user_value to the model which is holding the tree [i.e. a Camera object, or trees container Model]
+		
+		tree_cache[1].Parent = tree_model --parent the trunk base,
+		tree_cache[2].Parent = tree_model --trunk,
+		tree_cache[3].Parent = tree_model --and branches to the tree_model
+		
+		tree_model.Parent = tree_models --parent the new tree_model to the tree_models [in workspace]
+		
+		print("Used cache: #"..tree_container.Name)
+		return tree_model
+	end
 	
-	av.Value = tree_models
+	local recache_tree(tree_model)
+		if not tree_model then return end --if there is no tree_model then do nothing
+		local tree_container = tree_storage[tree_model.Name]
+		if not tree_container[-1].Value then return end --if the tree_container [cache] is not being used then do nothing
 	
-	tc[1].Parent = tm
-	tc[2].Parent = tm
-	tc[3].Parent = tm
-	--for i, t in next, tc[2]:GetChildren() do t.Parent = tm[2] end
-	--for i, b in next, tc[3]:GetChildren() do b.Parent = tm[3] end
-	print("Used cache. [UID="..tc.Name.."]")
-	return tm
-end
-
-local RC = function(tm)
-	if not tm then return end
-	local tc = tree_storage[tm.Name]
-	if not tc[-1].Value then return end
-	tm[1].Parent = tc
-	tm[2].Parent = tc
-	tm[3].Parent = tc
-	--for i, t in next, tm[2]:GetChildren() do t.Parent = tc[2] end
-	--for i, b in next, tm[3]:GetChildren() do b.Parent = tc[3] end
-	tm:Destroy()
-	tc[-1].Value = false
-	tc[-2].Value = nil
-end
+		tree_model[1].Parent = tree_container --reparent the trunk base,
+		tree_model[2].Parent = tree_container --trunk,
+		tree_model[3].Parent = tree_container --and branches to the tree_container
+	
+		tree_model:Destroy() --Get rid of the tree_model
+	
+		tree_container[-1].Value = false --set the is_used value to false
+		tree_container[-2].Value = nil --and set the user_value to nil
+	end
 
 local test = function()
 	local num = 10
@@ -503,6 +465,15 @@ local test = function()
 	end
 	print("finished")
 end
+	
+end
+
+return Tree
+
+
+
+
+
 
 tree_storage.Parent = storage
 tree_models.Parent = workspace
