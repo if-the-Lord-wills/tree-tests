@@ -46,10 +46,13 @@ root obstacles prevent secondary or primary root growth and add weight perpendic
 
 ]]
 
+repeat wait(1) until game:IsLoaded()
+
 local Tree = newproxy(true) do
 	
 	local server_storage = game:GetService("ServerStorage")
 	local replicated_storage = game:GetService("ReplicatedStorage")
+	local run_service = game:GetService("RunService")
 	
 	local templates = {
 		Part = Instance.new("Part"),
@@ -355,6 +358,39 @@ local Tree = newproxy(true) do
 	
 		tree_container[-1].Value = false --set the is_used value to false
 		tree_container[-2].Value = nil --and set the user_value to nil
+	end
+	
+	local function test(params)
+		local floor = math.floor
+		local CN = CFrame.new
+	
+		local edge_tree_count = params.edge__tree_count
+		local sq_length = floor(math.sqrt(edge_length))
+		local render_distance = params.render_distance
+		
+		local character = workspace:WaitForChild(params.TesterName)
+		local torso = character.PrimaryPart
+	
+		if not character or not torso then print("no Character or Torso") end
+		
+		print("Character found")
+		
+		local loading_hint = Instance.new("Hint", workspace)
+			loading_hint.Name = "Loading Hint"
+			loading_hint.Text = "Generating tree data... [0/"..edge_tree_count.."]"
+		
+		local Q = Random.new()
+	
+		for i = 1, edge_tree_count do
+			run_service.Heartbeat:Wait()
+			for j = 1, edge_tree_count do
+				local time_seed = tick()
+				local size = math.ceil(Q:NextNumber()*4+4)
+				local offset_1, offset_2 = Q:NextNumber()*40-20, Q:NextNumber()*40-20
+				local position = CFrame.new()
+			end
+		end
+		
 	end
 
 local test = function()
